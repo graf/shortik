@@ -1,0 +1,15 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: 10
+  username: postgres
+
+development:
+  <<: *default
+  host: postgres
+  database: shortik_development
+
+test:
+  <<: *default
+  host: postgres
+  database: shortik_test
