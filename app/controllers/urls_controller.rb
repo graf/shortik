@@ -2,25 +2,31 @@
 
 class UrlsController < ApplicationController
   def create
-    @url = ShortUrl.new(original_url: url_param)
-    if @url.valid?
-      @url.save!
-      render plain: url_url(@url.uuid), status: :ok
-    else
-      render plain: PlainText::ValidationErrorsPresenter.new(@url.errors).as_plain_text,
-             status: :unprocessable_entity
+    call_operation(Url::CreateOp, url: url_param) do |result|
+      result.success { render plain: url_url(result.uuid), status: :created }
+      result.failure(Url::CreateOp::ValidationError) do |e|
+        render plain: e.model.errors.full_messages.join("\n"),
+               status: :unprocessable_entity
+      end
     end
   end
 
   def show
-    @url = ShortUrl.find_by!(uuid: params[:uuid])
-    @url.increment!(:access_count)
-    render plain: @url.original_url, status: :ok
+    call_operation(Url::TouchOp, uuid: params[:uuid]) do |result|
+      result.success { render plain: result.original_url, status: :ok }
+      result.failure(Url::TouchOp::NotFoundError) do
+        render plain: I18n.t('controllers.urls.show.not_found_error'), status: :not_found
+      end
+    end
   end
 
   def stats
-    @url = ShortUrl.find_by!(uuid: params[:url_uuid])
-    render plain: @url.access_count.to_s, status: :ok
+    call_operation(Url::FetchStatsOp, uuid: params[:url_uuid]) do |result|
+      result.success { render plain: result.access_count.to_s, status: :ok }
+      result.failure(Url::FetchStatsOp::NotFoundError) do
+        render plain: I18n.t('controllers.urls.stats.not_found_error'), status: :not_found
+      end
+    end
   end
 
   private
