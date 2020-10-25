@@ -2,32 +2,31 @@
 
 class UrlsController < ApplicationController
   def create
-    call_operation(Url::CreateOp, url: url_param) do |url|
-      if url.persisted?
-        render plain: url_url(url.uuid), status: :created
-      else
-        render plain: url.errors.full_messages.join("\n"),
+    call_operation(Url::CreateOp, url: url_param) do |result|
+      result.success { render plain: url_url(result.uuid), status: :created }
+      result.failure(Url::CreateOp::ValidationError) do |e|
+        render plain: e.model.errors.full_messages.join("\n"),
                status: :unprocessable_entity
       end
     end
-  rescue Url::CreateOp::Error => e
-    render plain: "Couldn't short URL. Error was: \"#{e.message}\"", status: :not_found
   end
 
   def show
-    call_operation(Url::TouchOp, uuid: params[:uuid]) do |url|
-      render plain: url.original_url, status: :ok
+    call_operation(Url::TouchOp, uuid: params[:uuid]) do |result|
+      result.success { render plain: result.original_url, status: :ok }
+      result.failure(Url::TouchOp::NotFoundError) do
+        render plain: I18n.t('controllers.urls.show.not_found_error'), status: :not_found
+      end
     end
-  rescue Url::TouchOp::NotFoundError
-    render plain: "URL doesn't not exist", status: :not_found
   end
 
   def stats
-    call_operation(Url::FetchOp, uuid: params[:url_uuid]) do |url|
-      render plain: url.access_count.to_s, status: :ok
+    call_operation(Url::FetchStatsOp, uuid: params[:url_uuid]) do |result|
+      result.success { render plain: result.access_count.to_s, status: :ok }
+      result.failure(Url::FetchStatsOp::NotFoundError) do
+        render plain: I18n.t('controllers.urls.stats.not_found_error'), status: :not_found
+      end
     end
-  rescue Url::FetchOp::Error
-    render plain: 0, status: :not_found
   end
 
   private

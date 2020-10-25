@@ -1,2 +1,8 @@
 en:
   hello: "Hello world"
+  controllers:
+    urls:
+      show:
+        not_found_error: URL doesn't not exist
+      stats:
+        not_found_error: URL doesn't not exist
