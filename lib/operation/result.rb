@@ -3,6 +3,7 @@
 module Operation
   class Errors
     delegate :empty?,
+             :key?,
              to: :@errors
 
     def initialize(errors:)
@@ -13,7 +14,11 @@ module Operation
       return unless @errors.key?(type)
 
       args = @errors.fetch(type)
-      yield(type.new(*args))
+      if block_given?
+        yield(type.new(*args))
+      else
+        type.new(*args)
+      end
     end
 
     def each
